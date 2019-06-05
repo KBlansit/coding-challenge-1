@@ -18,6 +18,7 @@ from src.parsing import parse_contour_file, parse_dicom_file, poly_to_mask
 CONTOUR_DATA_PATH = "data/contourfiles"
 DICOM_DATA_PATH = "data/dicoms"
 LINK_DATA_PATH = "data/link.csv"
+OUTPUT_NAME = "output/contour_annotations.hdf5"
 
 contour_RGX = re.compile("\d{4}")
 
@@ -32,10 +33,10 @@ logging.basicConfig(
 def write_image(path, img_matrix, overlay):
     """Writes image with contour to the given path
 
-    param: path: the path to write to
-    param: img_matrix: the dicom image
-    param: overlay: the overlay image
-    efect: writes image
+    :param: path: the path to write to
+    :param: img_matrix: the dicom image
+    :param: overlay: the overlay image
+    :efect: writes image
     """
     fig, ax = plt.subplots(1, dpi = 125)
 
@@ -53,8 +54,8 @@ def process_row(curr_row):
     value:
         the numpy image or contour
 
-    param: curr_row: a pandas series to process
-    return: dictionary of /patient_id/instance_number/
+    :param: curr_row: a pandas series to process
+    :return: dictionary of /patient_id/instance_number/
     """
     # construct directories for input
     dicom_dir = os.path.join(DICOM_DATA_PATH, curr_row["patient_id"])
@@ -115,13 +116,13 @@ def process_row(curr_row):
 
     # create rslt_dict to store results
     # rslt_dict has paths organized as:
+    # /patient_id/instance_number/image_matrix
     # /patient_id/instance_number/contour
-    # /patient_id/instance_number/image
     rslt_dict = {}
     for curr_k in intersection_lst:
         base_rslt_key = "{}/{}".format(curr_row["patient_id"], curr_k)
 
-        rslt_dict[base_rslt_key+"/image"] = curr_dicom_dict[curr_k]
+        rslt_dict[base_rslt_key+"/image_matrix"] = curr_dicom_dict[curr_k]
         rslt_dict[base_rslt_key+"/i_contour"] = curr_contour_dict[curr_k]
 
         # write contour mask overlaid on image as a file
@@ -146,7 +147,7 @@ for i, row in tqdm(link_df.iterrows()):
 
 # create data connection, write files, and clean up
 print("Writing Files:")
-f_conn = h5py.File("output/contour_annotations.h5py", "w")
+f_conn = h5py.File(OUTPUT_NAME, "w")
 
 # combine into a single dict
 combined_dict = {k: v for d in rslt_dict_lst for k, v in d.items()}
