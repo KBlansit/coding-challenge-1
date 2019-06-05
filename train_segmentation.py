@@ -25,7 +25,7 @@ MOMENTUM = 0.99
 INPUT_SHAPE = (256, 256, 1)
 
 logging.basicConfig(
-    filename = "logs/dicom_processing_dicom.log",
+    filename = "logs/trainig.log",
     format = '%(asctime)-15s %(pathname)s %(message)-15s',
     level = logging.DEBUG,
 )
