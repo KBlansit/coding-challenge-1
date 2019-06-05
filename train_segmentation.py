@@ -6,7 +6,7 @@ import numpy as np
 from keras.models import Model, Input, load_model
 from keras.layers import Convolution2D, MaxPooling2D, UpSampling2D, concatenate
 from keras.optimizers import Adam, SGD
-from keras.losses import mean_squared_error
+from keras.losses import binary_crossentropy
 
 from src.data_generator import DataGenerator
 
@@ -18,7 +18,7 @@ BATCH_SIZE = 8
 
 KERNEL_SIZE = 3
 EPOCHS = 10
-LEARN_RATE = 10e-8
+LEARN_RATE = 10e-4
 DECAY = DECAY = LEARN_RATE/(EPOCHS)
 MOMENTUM = 0.99
 
@@ -96,7 +96,7 @@ def get_2d_u_net_segmentation():
 
     # compile
     model.compile(
-        loss=mean_squared_error,
+        loss=binary_crossentropy,
         optimizer=SGD(
             lr=float(LEARN_RATE),
             decay=float(DECAY),
