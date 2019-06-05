@@ -56,8 +56,10 @@ def process_row(curr_row):
     """
     # construct directories for input
     dicom_dir = os.path.join(DICOM_DATA_PATH, curr_row["patient_id"])
+
     curr_dicom_dict = {}
     for curr_dicom_file in os.listdir(dicom_dir):
+        # get dicom path
         curr_dicom_path = os.path.join(dicom_dir, curr_dicom_file)
 
         # will return either none or list of contours
@@ -66,12 +68,15 @@ def process_row(curr_row):
             dicom_id = ntpath.basename(curr_dicom_path).split(".")[0]
             curr_dicom_dict[dicom_id] = dicom_dict["pixel_data"]
 
+
     # construct directories for contour label; original_id is label id
     i_contour_dir = os.path.join(
         CONTOUR_DATA_PATH, curr_row["original_id"], "i-contours"
     )
+
     curr_contour_dict = {}
     for curr_contour_file in os.listdir(i_contour_dir):
+        # get contour path
         curr_contour_path = os.path.join(i_contour_dir, curr_contour_file)
 
         # will return either list of countirs
@@ -93,6 +98,7 @@ def process_row(curr_row):
             # save to dict
             curr_contour_dict[contour_id] = poly_to_mask(contour_rslt, *dims)
 
+
     # determine which contours we have missing and log
     missing_contours = list(set(curr_dicom_dict.keys()) -\
                             set(curr_contour_dict.keys()))
@@ -100,6 +106,7 @@ def process_row(curr_row):
         logging.warning("Missing i-contour file: patient {}, contour {}".\
                         format(curr_row["patient_id"], curr_missing))
 
+                        
     # get intersection of files so we know what to interate over
     intersection_lst = list(set(curr_contour_dict.keys()) &\
                             set(curr_dicom_dict.keys()))
