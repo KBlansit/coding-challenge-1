@@ -106,7 +106,7 @@ def process_row(curr_row):
         logging.warning("Missing i-contour file: patient {}, contour {}".\
                         format(curr_row["patient_id"], curr_missing))
 
-                        
+
     # get intersection of files so we know what to interate over
     intersection_lst = list(set(curr_contour_dict.keys()) &\
                             set(curr_dicom_dict.keys()))
@@ -135,18 +135,19 @@ def process_row(curr_row):
 # read in link csv
 link_df = pd.read_csv(LINK_DATA_PATH)
 
-print("Processing Files:")
 
+print("Processing Files:")
 rslt_dict_lst = []
 for i, row in tqdm(link_df.iterrows()):
     rslt_dict_lst.append(process_row(row))
 
-# combine into a single dict
-combined_dict = {k: v for d in rslt_dict_lst for k, v in d.items()}
 
 # create data connection, write files, and clean up
 print("Writing Files:")
 f_conn = h5py.File("output/contour_annotations.h5py", "w")
+
+# combine into a single dict
+combined_dict = {k: v for d in rslt_dict_lst for k, v in d.items()}
 for k, v in combined_dict.items():
     f_conn[k] = v
 
