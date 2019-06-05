@@ -1,4 +1,5 @@
 """Script for training data"""
+
 import h5py
 import logging
 import numpy as np
