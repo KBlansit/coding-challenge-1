@@ -14,6 +14,7 @@ from matplotlib import pylab as plt
 
 from src.parsing import parse_contour_file, parse_dicom_file, poly_to_mask
 
+
 CONTOUR_DATA_PATH = "data/contourfiles"
 DICOM_DATA_PATH = "data/dicoms"
 LINK_DATA_PATH = "data/link.csv"
@@ -25,6 +26,7 @@ logging.basicConfig(
     format = '%(asctime)-15s %(pathname)s %(message)-15s',
     level = logging.INFO,
 )
+
 
 # user defined functions
 def write_image(path, img_matrix, overlay):
