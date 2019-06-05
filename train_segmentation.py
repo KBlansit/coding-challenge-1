@@ -8,6 +8,7 @@ from keras.layers import Convolution2D, MaxPooling2D, UpSampling2D, concatenate
 from keras.optimizers import Adam, SGD
 from keras.losses import mean_squared_error
 
+from src.data_generator import DataGenerator
 
 # paths
 DATA_PATH = "output/contour_annotations.hdf5"
@@ -15,17 +16,19 @@ DATA_PATH = "output/contour_annotations.hdf5"
 # deep learning parameters
 BATCH_SIZE = 8
 
+KERNEL_SIZE = 3
 EPOCHS = 10
 LEARN_RATE = 10e-3
 DECAY = DECAY = LEARN_RATE/(EPOCHS)
 MOMENTUM = 0.99
 
+INPUT_SHAPE = (256, 256, 1)
+
 logging.basicConfig(
     filename = "logs/dicom_processing_dicom.log",
     format = '%(asctime)-15s %(pathname)s %(message)-15s',
-    level = logging.INFO,
+    level = logging.DEBUG,
 )
-
 
 # user defined functions
 def get_2d_u_net_segmentation():
@@ -103,27 +106,15 @@ def get_2d_u_net_segmentation():
 
     return model
 
-# read in file
-f_conn = h5py.File(DATA_PATH, "r")
+# load u net
+u_net = get_2d_u_net_segmentation()
 
-# get all keys
+# get data gen object
+data_gen = DataGenerator(DATA_PATH, BATCH_SIZE)
 
-f_keys = list(f_conn.keys())
-f_keys = [["{}/{}".format(x,y) for y in f_conn[x]] for x in f_keys]
-f_keys = [x for y in f_keys for x in y]
-
-
-batch_size = 8
-
-f_keys
-del f_keys[0]
-
-
-
-
-
-
-
-
-
-slice_lst[-1]
+# fit model
+u_net.fit_generator(
+    generator = data_gen.data_generator(),
+    steps_per_epoch = data_gen.get_num_steps(),
+    epochs = EPOCHS,
+)

@@ -1,14 +1,14 @@
 """Unit tests for DataGenerator"""
 
+
 import unittest
-
 import numpy as np
-
 from src.data_generator import DataGenerator
 
-np.random.seed(11928127)
 
+np.random.seed(11928127)
 DATA_PATH = "output/contour_annotations.hdf5"
+
 
 class TestDataGenerator(unittest.TestCase):
 

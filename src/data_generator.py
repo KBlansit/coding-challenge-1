@@ -1,7 +1,11 @@
 """Defines the data generator functions"""
 
+
 import h5py
+import logging
 import numpy as np
+
+from pprint import pprint
 
 class DataGenerator():
     def __init__(self, f_conn_path, batch_size, debug = False):
@@ -100,6 +104,7 @@ class DataGenerator():
             for curr_slc in slc_lst:
                 # get slice of keys
                 curr_keys = rnd_k_ary[curr_slc]
+                logging.debug("Loading cases: {}".format(pprint(curr_keys)))
 
                 # return prematurely with debug flag
                 if self.debug:
