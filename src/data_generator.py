@@ -87,7 +87,7 @@ class DataGenerator():
         """
         return np.ceil(len(self.train_keys)/self.batch_size).astype('int')
 
-    def data_generator(self, debug = False):
+    def data_generator(self):
         """The data generator for fit_generator
 
         :debug: debug flag
@@ -104,10 +104,10 @@ class DataGenerator():
             for curr_slc in slc_lst:
                 # get slice of keys
                 curr_keys = rnd_k_ary[curr_slc]
-                logging.debug("Loading cases: {}".format(pprint(curr_keys)))
 
                 # return prematurely with debug flag
                 if self.debug:
                     yield curr_keys
                 else:
-                    yield self._construct_data(curr_keys)
+                    x_train, y_train = self._construct_data(curr_keys)
+                    yield x_train, y_train
