@@ -40,7 +40,7 @@ def write_image(path, img_matrix, overlay):
     ax.imshow(img_matrix, "gray")
     ax.imshow(overlay, "inferno", alpha = 0.3)
 
-    fig.savefig(img_path)
+    fig.savefig(path)
     plt.close()
 
 def process_row(curr_row):
@@ -130,14 +130,17 @@ link_df = pd.read_csv(LINK_DATA_PATH)
 
 print("Processing Files:")
 
-rslt_dict_lst = {}
+rslt_dict_lst = []
 for i, row in tqdm(link_df.iterrows()):
     rslt_dict_lst.append(process_row(row))
+
+# combine into a single dict
+combined_dict = {k: v for d in rslt_dict_lst for k, v in d.items()}
 
 # create data connection, write files, and clean up
 print("Writing Files:")
 f_conn = h5py.File("output/contour_annotations.h5py", "w")
-for k, v in rslt_dict.items():
+for k, v in combined_dict.items():
     f_conn[k] = v
 
 f_conn.close()
