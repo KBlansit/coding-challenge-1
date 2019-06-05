@@ -11,6 +11,7 @@ from keras.losses import binary_crossentropy
 
 from src.data_generator import DataGenerator
 
+
 # paths
 DATA_PATH = "output/contour_annotations.hdf5"
 
@@ -30,6 +31,7 @@ logging.basicConfig(
     format = '%(asctime)-15s %(pathname)s %(message)-15s',
     level = logging.DEBUG,
 )
+
 
 # user defined functions
 def get_2d_u_net_segmentation():
@@ -107,6 +109,7 @@ def get_2d_u_net_segmentation():
 
     return model
 
+    
 # load u net
 u_net = get_2d_u_net_segmentation()
 
