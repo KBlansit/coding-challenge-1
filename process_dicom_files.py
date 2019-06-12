@@ -15,7 +15,7 @@ from matplotlib import pylab as plt
 
 from src.parsing import parse_contour_file, parse_dicom_file, poly_to_mask
 
-
+# system wide parameters
 CONTOUR_DATA_PATH = "data/contourfiles"
 DICOM_DATA_PATH = "data/dicoms"
 LINK_DATA_PATH = "data/link.csv"
@@ -70,6 +70,7 @@ def process_contour(org_id, contour_name, curr_dicom_dict):
         CONTOUR_DATA_PATH, org_id, contour_name
     )
 
+    
     curr_contour_dict = {}
     for curr_contour_file in os.listdir(contour_dir):
         # get contour path
@@ -195,9 +196,11 @@ for _, row in tqdm(link_df.iterrows()):
 print("Writing Files:")
 f_conn = h5py.File(OUTPUT_NAME, "w")
 
+
 # combine into a single dict
 combined_dict = {k: v for d in rslt_dict_lst for k, v in d.items()}
 for k, v in combined_dict.items():
     f_conn[k] = v
+
 
 f_conn.close()
