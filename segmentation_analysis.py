@@ -48,6 +48,34 @@ def make_threshold_based_segmentation(curr_k, f_conn, threshold = 125):
     # return
     return pred_i_contour
 
+def dice(im1, im2):
+    """Computes the Dice coefficient, a measure of set similarity.
+    adapted from: https://gist.github.com/JDWarner/6730747
+
+    Notes
+    -----
+    The order of inputs for `dice` is irrelevant. The result will be
+    identical if `im1` and `im2` are switched.
+
+    Maximum similarity = 1
+    No similarity = 0
+
+    :params: im1: array-like, bool
+    :params: im2: array-like, bool
+    :returns: dice similarity coefficient (float) [0-1]
+    """
+
+    im1 = np.asarray(im1).astype(np.bool)
+    im2 = np.asarray(im2).astype(np.bool)
+
+    if im1.shape != im2.shape:
+        raise ValueError("Shape mismatch: im1 and im2 must have the same shape.")
+
+    # Compute Dice coefficient
+    intersection = np.logical_and(im1, im2)
+
+    return 2. * intersection.sum() / (im1.sum() + im2.sum())
+
 # read in hdf5 connection
 f_conn = h5py.File(DATA_PATH, "r")
 
@@ -117,10 +145,24 @@ sns.kdeplot(img_mtx[i_cont_loc], shade=True,
             label="Blood pool (inner) contour")
 sns.kdeplot(img_mtx[m_cont_loc], shade=True,
             label="Myocardial (outer - inner) contour")
-plt.suptitle("Distributions of intensities.\n", fontsize=10)
+plt.suptitle("Distributions of intensities.", fontsize=10)
 
 
 # lets say the threshold is ~125
-thresh = 125
+# get predicted contours from this
+thresh = 100
+pred_i_contour = [make_threshold_based_segmentation(x, f_conn, thresh) for x in f_keys]
 
-pred_i_contour = [make_threshold_based_segmentation(x, f_conn) for x in f_keys]
+# get all dice scores
+dice_lst = []
+for i, curr_k in enumerate(f_keys):
+    dice_lst.append(dice(pred_i_contour[i], i_contr_mtx[i]))
+
+dice_txt = "Mean DICE: {}±{}".format(
+    round(np.mean(dice_lst), 2),
+    round(np.std(dice_lst), 2),
+)
+sns.boxplot(dice_lst)
+plt.suptitle("Box and whisker plot of DICE coefficients\n\
+             " + dice_txt, fontsize=10)
+plt.xlabel("DICE Coefficient")
