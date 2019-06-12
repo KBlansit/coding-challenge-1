@@ -10,11 +10,11 @@ from matplotlib import pylab as plt
 DATA_PATH = "output/contour_annotations.hdf5"
 
 # user defined functions
-def make_subtraction_contour(curr_k, f_conn):
-    """makes contours between outer and inner contours
+def make_myocardium_contour(curr_k, f_conn):
+    """makes contours between outer and inner contours to define myocardium
     :params: curr_k: the current key to process
     :params: f_conn: hdf5 file connection
-    :returns: contour between outer and inner contours
+    :returns: contour myocardium contour
     """
     # get contours
     i_contr = f_conn[curr_k]["i_contour"][()]
@@ -27,6 +27,26 @@ def make_subtraction_contour(curr_k, f_conn):
     # subtract, convert to bool, and return
     return (o_contr - i_contr).astype('bool')
 
+def make_threshold_based_segmentation(curr_k, f_conn, threshold = 125):
+    """makes threshold based contours of myocardium
+    :params: curr_k: the current key to process
+    :params: f_conn: hdf5 file connection
+    :params: threshold: the intensity threshold value
+    :returns: segmentation mask of myocardium
+    """
+
+    # get outer contour and image
+    o_contr = f_conn[curr_k]["o_contour"][()]
+    img = f_conn[curr_k]["image_matrix"][()]
+
+    # find pixels that are about threshold within outer contour
+    # these pixels are defined then as the
+    pred_i_contour = o_contr.copy()
+    o_indx = np.where(pred_i_contour)
+    pred_i_contour[o_indx] = img[o_indx] > threshold
+
+    # return
+    return pred_i_contour
 
 # read in hdf5 connection
 f_conn = h5py.File(DATA_PATH, "r")
@@ -38,9 +58,11 @@ f_keys = [["{}/{}".format(x,y) for y in f_conn[x]] for x in f_keys]
 f_keys = [x for y in f_keys for x in y]
 
 
-# get inner contour and subtraction contours (outer - inner) into matrix
+# get all contours
+# here, m_contour_mtx is the GT true contour
 i_contr_mtx = np.stack([f_conn[x]["i_contour"] for x in f_keys])
-sub_contr_mtx = np.stack([make_subtraction_contour(x, f_conn) for x in f_keys])
+o_contr_mtx = np.stack([f_conn[x]["o_contour"] for x in f_keys])
+m_contr_mtx = np.stack([make_myocardium_contour(x, f_conn) for x in f_keys])
 
 # get images
 img_mtx = np.stack([f_conn[x]["image_matrix"] for x in f_keys])
@@ -48,7 +70,7 @@ img_mtx = np.stack([f_conn[x]["image_matrix"] for x in f_keys])
 # get indicies of masks
 # indexing: 0: img index, 1: x, 2: y
 i_cont_loc = np.where(i_contr_mtx)
-sub_cont_loc = np.where(sub_contr_mtx)
+m_cont_loc = np.where(m_contr_mtx)
 
 
 # show plot of inner and subtraction (between i- and o- contours) contour
@@ -62,38 +84,43 @@ ax[0].imshow(i_contr_mtx[img_indx], "inferno", alpha = 0.3)
 
 # contour between inner and outer contours
 ax[1].imshow(img_mtx[img_indx], "gray")
-ax[1].imshow(sub_contr_mtx[img_indx], "inferno", alpha = 0.3)
+ax[1].imshow(m_contr_mtx[img_indx], "inferno", alpha = 0.3)
 ax[1].arrow(50, 100, 80, 27, color="red", head_width=5, head_length=7)
 
 # figure titple
-fig.suptitle("Inner and in bwetween inner/outer contours.", fontsize=10)
+fig.suptitle("Blood pool (inner) and myocardial (outer - inner) contours.",
+             fontsize=10)
 
 
 # assessment of vairance of i-contours between cases
 for i, curr_k in enumerate(f_keys):
     # get contour indicies for the current case, and plot to seaborn
     curr_i_indx = np.where(i_contr_mtx[i])
-    sns.kdeplot(img_mtx[i][curr_inner_indx])
+    sns.kdeplot(img_mtx[i][curr_i_indx])
 plt.xlim(0, 750) # ~ min max of contour values
-plt.suptitle("Distribution of per slice inner contours.\n\
+plt.suptitle("Distribution of per slice blood pool (inner) contours.\n\
              Each line represents a unqiue slice's distribution", fontsize=10)
 
 
 # assessment of vairance of subtraction contours (outer - inner) between cases
 for i, curr_k in enumerate(f_keys):
     # get subtraction contour indicies for the current case, and plot to seaborn
-    curr_sub_indx = np.where(sub_contr_mtx[i])
-    sns.kdeplot(img_mtx[i][curr_sub_indx])
+    curr_m_indx = np.where(m_contr_mtx[i])
+    sns.kdeplot(img_mtx[i][curr_m_indx])
 plt.xlim(0, 750) # ~ min max of contour values
-plt.suptitle("Distribution of per slice in between inner/outer contours.\n\
+plt.suptitle("Distribution of per slice myocardial (outer - inner) contours.\n\
              Each line represents a unqiue slice's distribution", fontsize=10)
 
 
 # assessment of overall
-sns.kdeplot(img_mtx[i_cont_loc], shade=True, label="Inner Contour")
-sns.kdeplot(img_mtx[sub_cont_loc], shade=True, label="Between Inner and Outer Contour")
+sns.kdeplot(img_mtx[i_cont_loc], shade=True,
+            label="Blood pool (inner) contour")
+sns.kdeplot(img_mtx[m_cont_loc], shade=True,
+            label="Myocardial (outer - inner) contour")
 plt.suptitle("Distributions of intensities.\n", fontsize=10)
 
 
 # lets say the threshold is ~125
 thresh = 125
+
+pred_i_contour = [make_threshold_based_segmentation(x, f_conn) for x in f_keys]
