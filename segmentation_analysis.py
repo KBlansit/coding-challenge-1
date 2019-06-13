@@ -135,6 +135,7 @@ img_mtx = np.stack([f_conn[x]["image_matrix"] for x in f_keys])
 i_cont_loc = np.where(i_contr_mtx)
 m_cont_loc = np.where(m_contr_mtx)
 
+
 # show plot of inner and subtraction (between i- and o- contours) contour
 # make subplots
 img_indx = 0
@@ -187,6 +188,22 @@ sns.kdeplot(img_mtx[m_cont_loc], shade=True,
             label="Myocardial (outer - inner) contour")
 plt.suptitle("Distributions of intensities.", fontsize=10)
 plt.savefig(os.path.join(OUTPUT_FIG_PATH, "bp_v_myo_hist.png"))
+plt.close()
+
+
+# assment of a single case
+# set index, and get i- and m- contour indicies irrelevant for that case
+img_indx = 0
+curr_i_cont_loc = np.where(i_contr_mtx[img_indx])
+curr_m_cont_loc = np.where(m_contr_mtx[img_indx])
+
+# plot
+sns.kdeplot(img_mtx[img_indx][curr_i_cont_loc], shade=True,
+            label="Blood pool (inner) contour")
+sns.kdeplot(img_mtx[img_indx][curr_m_cont_loc], shade=True,
+            label="Myocardial (outer - inner) contour")
+plt.suptitle("Distributions of intensities (for indx = 0).", fontsize=10)
+plt.savefig(os.path.join(OUTPUT_FIG_PATH, "bp_v_myo_hist_0.png"))
 plt.close()
 
 
