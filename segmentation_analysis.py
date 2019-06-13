@@ -1,4 +1,5 @@
 # import libraries
+import os
 import h5py
 import logging
 import numpy as np
@@ -12,6 +13,7 @@ from skimage.segmentation import clear_border
 
 # system wide variables
 DATA_PATH = "output/contour_annotations.hdf5"
+OUTPUT_FIG_PATH = "output/segmentation_analysis"
 SQUARE = square(5)
 
 # user defined functions
@@ -150,6 +152,8 @@ ax[1].arrow(50, 100, 80, 27, color="red", head_width=5, head_length=7)
 # figure titple
 fig.suptitle("Blood pool (inner) and myocardial (outer - inner) contours.",
              fontsize=10)
+fig.savefig(os.path.join(OUTPUT_FIG_PATH, "example_contour.png"))
+plt.close()
 
 
 # assessment of vairance of i-contours between cases
@@ -160,6 +164,8 @@ for i, curr_k in enumerate(f_keys):
 plt.xlim(0, 750) # ~ min max of contour values
 plt.suptitle("Distribution of per slice blood pool (inner) contours.\n\
              Each line represents a unqiue slice's distribution", fontsize=10)
+plt.savefig(os.path.join(OUTPUT_FIG_PATH, "individual_bp_hist.png"))
+plt.close()
 
 
 # assessment of vairance of subtraction contours (outer - inner) between cases
@@ -170,6 +176,8 @@ for i, curr_k in enumerate(f_keys):
 plt.xlim(0, 750) # ~ min max of contour values
 plt.suptitle("Distribution of per slice myocardial (outer - inner) contours.\n\
              Each line represents a unqiue slice's distribution", fontsize=10)
+plt.savefig(os.path.join(OUTPUT_FIG_PATH, "individual_myo_hist.png"))
+plt.close()
 
 
 # assessment of overall
@@ -178,14 +186,17 @@ sns.kdeplot(img_mtx[i_cont_loc], shade=True,
 sns.kdeplot(img_mtx[m_cont_loc], shade=True,
             label="Myocardial (outer - inner) contour")
 plt.suptitle("Distributions of intensities.", fontsize=10)
+plt.savefig(os.path.join(OUTPUT_FIG_PATH, "bp_v_myo_hist.png"))
+plt.close()
 
 
 # get predicted contours from this
 pred_i_contour = np.stack([make_threshold_based_segmentation(x, f_conn) for x in f_keys])
 
-
 # evaluate dice for threshold only segmentation
 eval_dice(pred_i_contour, i_contr_mtx)
+plt.savefig(os.path.join(OUTPUT_FIG_PATH, "thresh_pred_dice.png"))
+plt.close()
 
 
 # there seems to be some "noise"
@@ -202,7 +213,10 @@ fig, ax = plt.subplots(3, dpi = 150)
 ax[0].imshow(i_contr_mtx[img_indx], "inferno")
 ax[1].imshow(pred_i_contour[img_indx], "inferno")
 ax[2].imshow(cleaned_pred_contr[img_indx], "inferno")
-
+plt.savefig(os.path.join(OUTPUT_FIG_PATH, "cleaning_thresh_contour.png"))
+plt.close()
 
 # evaluate dice for threshold only segmentation
 eval_dice(cleaned_pred_contr, i_contr_mtx)
+plt.savefig(os.path.join(OUTPUT_FIG_PATH, "clean_dice.png"))
+plt.close()
