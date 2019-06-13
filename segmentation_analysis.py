@@ -265,7 +265,18 @@ plt.close()
 
 
 # try flood filling
-flood_filled_mtx = np.stack([make_flood_fill_based_segmentation(x, f_conn) for x in f_keys])
-eval_dice(flood_filled_mtx, i_contr_mtx)
+flood_filled_contr = np.stack([make_flood_fill_based_segmentation(x, f_conn) for x in f_keys])
+eval_dice(flood_filled_contr, i_contr_mtx)
 plt.savefig(os.path.join(OUTPUT_FIG_PATH, "flood_fill_dice.png"))
+plt.close()
+
+
+# compare GT/theshold/flood fill
+img_indx = 0
+fig, ax = plt.subplots(3, dpi = 150)
+
+ax[0].imshow(i_contr_mtx[img_indx], "inferno")
+ax[1].imshow(cleaned_pred_contr[img_indx], "inferno")
+ax[2].imshow(flood_filled_contr[img_indx], "inferno")
+plt.savefig(os.path.join(OUTPUT_FIG_PATH, "gt_thresh_floodfill.png"))
 plt.close()
