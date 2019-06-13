@@ -6,6 +6,7 @@ import h5py
 import ntpath
 import logging
 
+import numpy as np
 import pandas as pd
 
 from tqdm import tqdm
@@ -63,14 +64,14 @@ def process_contour(org_id, contour_name, curr_dicom_dict):
         value: dicom image np matrix
     :return: dict with
         keys: contour id (mapped to dicom id)
-        value: of contour mask
+        value: contour mask
     """
     # construct directories for contour label; original_id is label id
     contour_dir = os.path.join(
         CONTOUR_DATA_PATH, org_id, contour_name
     )
 
-    
+
     curr_contour_dict = {}
     for curr_contour_file in os.listdir(contour_dir):
         # get contour path
@@ -96,6 +97,30 @@ def process_contour(org_id, contour_name, curr_dicom_dict):
             curr_contour_dict[contour_id] = poly_to_mask(contour_rslt, *dims)
 
     return curr_contour_dict
+
+def quality_control_contours(curr_dict_k, i_contour_dict, o_contour_dict):
+    """Ensures that all pixels in i_contour are within o_contour
+    :param: curr_dict_k: string, current key
+    :param: i_contour_dict: contour dict
+        keys: contour id (mapped to dicom id)
+        value: inner contour mask
+    :param: o_contour_dict: contour dict
+        keys: contour id (mapped to dicom id)
+        value: outer contour mask
+    :effect: raises AssertionError if not all i_contour pxls within o_contour
+    """
+    # find all xy pixels for both contours
+    i_loc = np.where(i_contour_dict[curr_dict_k])
+    i_loc_xy = set(["{}_{}".format(x, y) for x, y in  zip(*i_loc)])
+
+    o_loc = np.where(o_contour_dict[curr_dict_k])
+    o_loc_xy = set(["{}_{}".format(x, y) for x, y in  zip(*o_loc)])
+
+    # all inner contour values should be inside of outer contour
+    # i.e. there should be no inner contour values that are not in outer contour
+    if len(i_loc_xy - o_loc_xy):
+        raise AssertionError("Outer contour did not fully encapculate inner\
+                             contour")
 
 def process_row(curr_row):
     """Processes a current row and results in a dictionary
@@ -127,6 +152,20 @@ def process_row(curr_row):
     org_id = curr_row["original_id"]
     i_contour_dict = process_contour(org_id, "i-contours", curr_dicom_dict)
     o_contour_dict = process_contour(org_id, "o-contours", curr_dicom_dict)
+
+
+    # quality control for contours
+    # iterate over intersection of keys between inner/outer contour dicts
+    for curr_dict_k in set(i_contour_dict.keys()) & set(o_contour_dict):
+        try:
+            quality_control_contours(curr_dict_k, i_contour_dict, o_contour_dict)
+        except AssertionError:
+            logging.warning("Inner contour not all within outer contour.\
+                            orginal_id: {}; contour: {}".format(
+                                org_id, curr_dict_k
+                            ))
+            del i_contour_dict[curr_dict_k]
+            del o_contour_dict[curr_dict_k]
 
 
     # determine which contours we have missing and log
@@ -188,8 +227,9 @@ link_df = pd.read_csv(LINK_DATA_PATH)
 
 print("Processing Files:")
 rslt_dict_lst = []
-for _, row in tqdm(link_df.iterrows()):
-    rslt_dict_lst.append(process_row(row))
+_, curr_row = [x for x in link_df.iterrows()][0]
+for _, curr_row in tqdm(link_df.iterrows()):
+    rslt_dict_lst.append(process_row(curr_row))
 
 
 # create data connection, write files, and clean up
