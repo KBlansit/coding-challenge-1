@@ -1,4 +1,5 @@
 # import libraries
+import cv2
 import h5py
 import logging
 import numpy as np
@@ -27,17 +28,24 @@ def make_myocardium_contour(curr_k, f_conn):
     # subtract, convert to bool, and return
     return (o_contr - i_contr).astype('bool')
 
-def make_threshold_based_segmentation(curr_k, f_conn, threshold = 125):
+def make_threshold_based_segmentation(curr_k, f_conn):
     """makes threshold based contours of myocardium
     :params: curr_k: the current key to process
     :params: f_conn: hdf5 file connection
-    :params: threshold: the intensity threshold value
     :returns: segmentation mask of myocardium
     """
 
     # get outer contour and image
     o_contr = f_conn[curr_k]["o_contour"][()]
     img = f_conn[curr_k]["image_matrix"][()]
+
+    # otsu binary threshold
+    threshold = cv2.threshold(
+        img.astype(np.uint8),
+        img.min(),
+        img.max(),
+        type=cv2.THRESH_BINARY+cv2.THRESH_OTSU
+    )[0]
 
     # find pixels that are about threshold within outer contour
     # these pixels are defined then as the
@@ -148,10 +156,8 @@ sns.kdeplot(img_mtx[m_cont_loc], shade=True,
 plt.suptitle("Distributions of intensities.", fontsize=10)
 
 
-# lets say the threshold is ~125
 # get predicted contours from this
-thresh = 100
-pred_i_contour = [make_threshold_based_segmentation(x, f_conn, thresh) for x in f_keys]
+pred_i_contour = [make_threshold_based_segmentation(x, f_conn) for x in f_keys]
 
 # get all dice scores
 dice_lst = []
