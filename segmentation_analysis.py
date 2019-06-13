@@ -7,9 +7,12 @@ import seaborn as sns
 from matplotlib import pylab as plt
 
 from skimage.filters import threshold_otsu
+from skimage.morphology import binary_closing, square
+from skimage.segmentation import clear_border
 
 # system wide variables
 DATA_PATH = "output/contour_annotations.hdf5"
+SQUARE = square(5)
 
 # user defined functions
 def make_myocardium_contour(curr_k, f_conn):
@@ -105,42 +108,6 @@ def eval_dice(mtx_1, mtx_2):
                  " + dice_txt, fontsize=10)
     plt.xlabel("DICE Coefficient")
 
-def flood_fill(mask):
-    """flood fills overlay mask
-    adapted from: https://stackoverflow.com/a/47483538/1564330
-    :params: mask: numpy overlay mask
-    :returns: flood filled mask
-    """
-    # cast to uint8 and copy
-    mask = mask.astype(np.uint8).copy()
-
-    # get shape
-    h, w = mask.shape
-
-    # flood fill to remove mask at borders of the image
-    # for uint8: 0 is empty, 255 is full
-    for row in range(h):
-        if mask[row, 0] == 255:
-            cv2.floodFill(binary, None, (0, row), 0)
-        if mask[row, w-1] == 255:
-            cv2.floodFill(binary, None, (w-1, row), 0)
-
-    for col in range(w):
-        if mask[0, col] == 255:
-            cv2.floodFill(binary, None, (col, 0), 0)
-        if mask[h-1, col] == 255:
-            cv2.floodFill(binary, None, (col, h-1), 0)
-
-    # flood fill background to find inner holes
-    holes = mask.copy()
-    cv2.floodFill(holes, None, (0, 0), 255)
-
-    # invert holes mask, bitwise or with mask to fill in holes
-    holes = cv2.bitwise_not(holes)
-    mask = cv2.bitwise_or(mask, holes)
-
-    return mask
-
 
 # read in hdf5 connection
 f_conn = h5py.File(DATA_PATH, "r")
@@ -219,3 +186,23 @@ pred_i_contour = np.stack([make_threshold_based_segmentation(x, f_conn) for x in
 
 # evaluate dice for threshold only segmentation
 eval_dice(pred_i_contour, i_contr_mtx)
+
+
+# there seems to be some "noise"
+# plus pappilary muscle "hole" is present
+# maybe additional filtering can help
+# lets use binary closing
+
+cleaned_pred_contr = np.stack([binary_closing(x, SQUARE) for x in pred_i_contour])
+
+# plt contoures before and after cleaning
+img_indx = 0
+fig, ax = plt.subplots(3, dpi = 150)
+
+ax[0].imshow(i_contr_mtx[img_indx], "inferno")
+ax[1].imshow(pred_i_contour[img_indx], "inferno")
+ax[2].imshow(cleaned_pred_contr[img_indx], "inferno")
+
+
+# evaluate dice for threshold only segmentation
+eval_dice(cleaned_pred_contr, i_contr_mtx)
