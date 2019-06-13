@@ -269,6 +269,27 @@ plt.savefig(os.path.join(OUTPUT_FIG_PATH, "clean_dice.png"))
 plt.close()
 
 
+# show worst DICE score
+# list all dice scores, and get argmin
+worst_indx = np.argmin([dice(pred_i_contour[i], i_contr_mtx[i]) for i in range(len(f_keys))])
+
+fig, ax = plt.subplots(2, dpi = 150)
+
+# inner contour
+ax[0].imshow(img_mtx[worst_indx], "gray")
+ax[0].imshow(i_contr_mtx[worst_indx], "inferno", alpha = 0.3)
+
+# contour between inner and outer contours
+ax[1].imshow(img_mtx[worst_indx], "gray")
+ax[1].imshow(m_contr_mtx[worst_indx], "inferno", alpha = 0.3)
+
+# figure titple
+fig.suptitle("Blood pool (inner) and myocardial (outer - inner) contours.",
+             fontsize=10)
+fig.savefig(os.path.join(OUTPUT_FIG_PATH, "apex_bad.png"))
+plt.close()
+
+
 # try flood filling
 flood_filled_contr = np.stack([make_flood_fill_based_segmentation(x, f_conn) for x in f_keys])
 eval_dice(flood_filled_contr, i_contr_mtx)
