@@ -1,11 +1,12 @@
 # import libraries
-import cv2
 import h5py
 import logging
 import numpy as np
 import seaborn as sns
 
 from matplotlib import pylab as plt
+
+from skimage.filters import threshold_otsu
 
 # system wide variables
 DATA_PATH = "output/contour_annotations.hdf5"
@@ -35,17 +36,13 @@ def make_threshold_based_segmentation(curr_k, f_conn):
     :returns: segmentation mask of myocardium
     """
 
-    # get outer contour and image
+    # get outer contour and image, and set values outside o-contour to zero
     o_contr = f_conn[curr_k]["o_contour"][()]
     img = f_conn[curr_k]["image_matrix"][()]
+    img[np.invert(o_contr)] = 0
 
     # otsu binary threshold
-    threshold = cv2.threshold(
-        img.astype(np.uint8),
-        img.min(),
-        img.max(),
-        type=cv2.THRESH_BINARY+cv2.THRESH_OTSU
-    )[0]
+    threshold = threshold_otsu(img)
 
     # find pixels that are about threshold within outer contour
     # these pixels are defined then as the
@@ -56,33 +53,94 @@ def make_threshold_based_segmentation(curr_k, f_conn):
     # return
     return pred_i_contour
 
-def dice(im1, im2):
+def dice(im_1, im_2):
     """Computes the Dice coefficient, a measure of set similarity.
     adapted from: https://gist.github.com/JDWarner/6730747
 
     Notes
     -----
     The order of inputs for `dice` is irrelevant. The result will be
-    identical if `im1` and `im2` are switched.
+    identical if `im_1` and `im_2` are switched.
 
     Maximum similarity = 1
     No similarity = 0
 
-    :params: im1: array-like, bool
-    :params: im2: array-like, bool
+    :params: im_1: array-like, bool
+    :params: im_2: array-like, bool
     :returns: dice similarity coefficient (float) [0-1]
     """
 
-    im1 = np.asarray(im1).astype(np.bool)
-    im2 = np.asarray(im2).astype(np.bool)
+    im_1 = np.asarray(im_1).astype(np.bool)
+    im_2 = np.asarray(im_2).astype(np.bool)
 
-    if im1.shape != im2.shape:
-        raise ValueError("Shape mismatch: im1 and im2 must have the same shape.")
+    if im_1.shape != im_2.shape:
+        raise ValueError("Shape mismatch: im_1 and im_2 must have the same shape.")
 
     # Compute Dice coefficient
-    intersection = np.logical_and(im1, im2)
+    intersection = np.logical_and(im_1, im_2)
 
-    return 2. * intersection.sum() / (im1.sum() + im2.sum())
+    return 2. * intersection.sum() / (im_1.sum() + im_2.sum())
+
+def eval_dice(mtx_1, mtx_2):
+    """evaluates slice wise DICE coefficient
+    :params: mtx_1: array-like, bool
+    :params: mtx_2: array-like, bool
+    """
+    # assertion check
+    if mtx_1.shape != mtx_2.shape:
+        raise ValueError("Shape mismatch: mtx_1 and mtx_2 must have the same\
+                          shape.")
+
+    # get all dice scores
+    dice_lst = []
+    for i, curr_k in enumerate(mtx_1):
+        dice_lst.append(dice(mtx_1[i], mtx_2[i]))
+
+    dice_txt = "Mean DICE: {}±{}".format(
+        round(np.mean(dice_lst), 2),
+        round(np.std(dice_lst), 2),
+    )
+    sns.boxplot(dice_lst)
+    plt.suptitle("Box and whisker plot of DICE coefficients\n\
+                 " + dice_txt, fontsize=10)
+    plt.xlabel("DICE Coefficient")
+
+def flood_fill(mask):
+    """flood fills overlay mask
+    adapted from: https://stackoverflow.com/a/47483538/1564330
+    :params: mask: numpy overlay mask
+    :returns: flood filled mask
+    """
+    # cast to uint8 and copy
+    mask = mask.astype(np.uint8).copy()
+
+    # get shape
+    h, w = mask.shape
+
+    # flood fill to remove mask at borders of the image
+    # for uint8: 0 is empty, 255 is full
+    for row in range(h):
+        if mask[row, 0] == 255:
+            cv2.floodFill(binary, None, (0, row), 0)
+        if mask[row, w-1] == 255:
+            cv2.floodFill(binary, None, (w-1, row), 0)
+
+    for col in range(w):
+        if mask[0, col] == 255:
+            cv2.floodFill(binary, None, (col, 0), 0)
+        if mask[h-1, col] == 255:
+            cv2.floodFill(binary, None, (col, h-1), 0)
+
+    # flood fill background to find inner holes
+    holes = mask.copy()
+    cv2.floodFill(holes, None, (0, 0), 255)
+
+    # invert holes mask, bitwise or with mask to fill in holes
+    holes = cv2.bitwise_not(holes)
+    mask = cv2.bitwise_or(mask, holes)
+
+    return mask
+
 
 # read in hdf5 connection
 f_conn = h5py.File(DATA_PATH, "r")
@@ -107,7 +165,6 @@ img_mtx = np.stack([f_conn[x]["image_matrix"] for x in f_keys])
 # indexing: 0: img index, 1: x, 2: y
 i_cont_loc = np.where(i_contr_mtx)
 m_cont_loc = np.where(m_contr_mtx)
-
 
 # show plot of inner and subtraction (between i- and o- contours) contour
 # make subplots
@@ -157,18 +214,8 @@ plt.suptitle("Distributions of intensities.", fontsize=10)
 
 
 # get predicted contours from this
-pred_i_contour = [make_threshold_based_segmentation(x, f_conn) for x in f_keys]
+pred_i_contour = np.stack([make_threshold_based_segmentation(x, f_conn) for x in f_keys])
 
-# get all dice scores
-dice_lst = []
-for i, curr_k in enumerate(f_keys):
-    dice_lst.append(dice(pred_i_contour[i], i_contr_mtx[i]))
 
-dice_txt = "Mean DICE: {}±{}".format(
-    round(np.mean(dice_lst), 2),
-    round(np.std(dice_lst), 2),
-)
-sns.boxplot(dice_lst)
-plt.suptitle("Box and whisker plot of DICE coefficients\n\
-             " + dice_txt, fontsize=10)
-plt.xlabel("DICE Coefficient")
+# evaluate dice for threshold only segmentation
+eval_dice(pred_i_contour, i_contr_mtx)
