@@ -281,7 +281,7 @@ ax[0].imshow(i_contr_mtx[worst_indx], "inferno", alpha = 0.3)
 
 # contour between inner and outer contours
 ax[1].imshow(img_mtx[worst_indx], "gray")
-ax[1].imshow(m_contr_mtx[worst_indx], "inferno", alpha = 0.3)
+ax[1].imshow(pred_i_contour[worst_indx], "inferno", alpha = 0.3)
 
 # figure titple
 fig.suptitle("Blood pool (inner) and myocardial (outer - inner) contours.",
