@@ -9,12 +9,15 @@ from matplotlib import pylab as plt
 
 from skimage.filters import threshold_otsu
 from skimage.morphology import binary_closing, square
-from skimage.segmentation import clear_border
+from skimage.segmentation import clear_border, flood_fill
+
+from scipy.ndimage.morphology import binary_fill_holes
 
 # system wide variables
 DATA_PATH = "output/contour_annotations.hdf5"
 OUTPUT_FIG_PATH = "output/segmentation_analysis"
 SQUARE = square(5)
+FLOOD_FILL_TOL = 100
 
 # user defined functions
 def make_myocardium_contour(curr_k, f_conn):
@@ -40,7 +43,6 @@ def make_threshold_based_segmentation(curr_k, f_conn):
     :params: f_conn: hdf5 file connection
     :returns: segmentation mask of myocardium
     """
-
     # get outer contour and image, and set values outside o-contour to zero
     o_contr = f_conn[curr_k]["o_contour"][()]
     img = f_conn[curr_k]["image_matrix"][()]
@@ -57,6 +59,29 @@ def make_threshold_based_segmentation(curr_k, f_conn):
 
     # return
     return pred_i_contour
+
+def make_flood_fill_based_segmentation(curr_k, f_conn):
+    """makes threshold based contours of myocardium
+    :params: curr_k: the current key to process
+    :params: f_conn: hdf5 file connection
+    :returns: segmentation mask of myocardium
+    """
+    # get outer contour and image, and set values outside o-contour to zero
+    o_contr = f_conn[curr_k]["o_contour"][()]
+    img = f_conn[curr_k]["image_matrix"][()]
+    img[np.invert(o_contr)] = 0
+
+    # get center of o-contour
+    center_o = np.mean(np.where(o_contr), axis=1).round().astype('int').tolist()
+    center_o = tuple(center_o)
+
+    # flood fill zeros
+    flood_filled = flood_fill(img, center_o, 0, tolerance=FLOOD_FILL_TOL)
+    flood_filled = binary_closing(flood_filled, SQUARE)
+    flood_filled = (o_contr.astype('int') - flood_filled.astype('int')).astype('bool')
+    flood_filled = binary_fill_holes(flood_filled)
+
+    return flood_filled
 
 def dice(im_1, im_2):
     """Computes the Dice coefficient, a measure of set similarity.
@@ -236,4 +261,11 @@ plt.close()
 # evaluate dice for threshold only segmentation
 eval_dice(cleaned_pred_contr, i_contr_mtx)
 plt.savefig(os.path.join(OUTPUT_FIG_PATH, "clean_dice.png"))
+plt.close()
+
+
+# try flood filling
+flood_filled_mtx = np.stack([make_flood_fill_based_segmentation(x, f_conn) for x in f_keys])
+eval_dice(flood_filled_mtx, i_contr_mtx)
+plt.savefig(os.path.join(OUTPUT_FIG_PATH, "flood_fill_dice.png"))
 plt.close()
