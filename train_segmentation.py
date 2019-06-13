@@ -1,5 +1,6 @@
 """Script for training data"""
 
+
 import h5py
 import logging
 import numpy as np
@@ -109,7 +110,7 @@ def get_2d_u_net_segmentation():
 
     return model
 
-    
+
 # load u net
 u_net = get_2d_u_net_segmentation()
 

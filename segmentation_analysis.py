@@ -1,3 +1,6 @@
+"""Segmentation Analysis"""
+
+
 # import libraries
 import os
 import h5py
@@ -13,11 +16,13 @@ from skimage.segmentation import clear_border, flood_fill
 
 from scipy.ndimage.morphology import binary_fill_holes
 
+
 # system wide variables
 DATA_PATH = "output/contour_annotations.hdf5"
 OUTPUT_FIG_PATH = "output/segmentation_analysis"
 SQUARE = square(5)
 FLOOD_FILL_TOL = 100
+
 
 # user defined functions
 def make_myocardium_contour(curr_k, f_conn):
